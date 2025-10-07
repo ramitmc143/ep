@@ -5,16 +5,23 @@ buildscript {
         compileSdkVersion = 35
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.0.21"
+        kotlinVersion =   "2.0.21"
+        cmakeVersion= "3.22.1"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle")
+        // classpath("com.android.tools.build:gradle:7.3.1")
+         classpath("com.android.tools.build:gradle:8.5.2")
+        // classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+          classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+           classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'
+
+        classpath 'com.google.gms:google-services:4.3.15' 
     }
 }
 

@@ -1,4 +1,7 @@
 {
   "name": "eenadupratibha",
-  "displayName": "eenadupratibha"
+  "displayName": "eenaduPratibha",
+   "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-8401462373718852~5836954458"
+  }
 }
