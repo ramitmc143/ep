@@ -142,7 +142,7 @@ dependencies {
     implementation "com.google.firebase:firebase-crashlytics"
     implementation "com.google.firebase:firebase-analytics"
     implementation "com.google.firebase:firebase-messaging"
-
+   implementation "androidx.viewpager2:viewpager2:1.1.0" // or latest
 
 
     if (hermesEnabled.toBoolean()) {

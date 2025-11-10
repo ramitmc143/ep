@@ -9,14 +9,14 @@ const DeviceDetails = async () => {
   const appVerName = DeviceInfo.getVersion(); // App version name
   const appVerCode = DeviceInfo.getBuildNumber(); // App version code
   // const networkType = await NetInfo.fetch().then(state => state.type); // Wifi/Cellular
-    // ✅ Await the network info properly
-    const netInfo = await NetInfo.fetch();
-    const networkType = netInfo.type; // Should be 'wifi', 'cellular', etc.
+  // ✅ Await the network info properly
+  const netInfo = await NetInfo.fetch();
+  const networkType = netInfo.type; // Should be 'wifi', 'cellular', etc.
 
   const userDetails = {
     device_id: deviceId,
     device_name: deviceName,
-    network_type: networkType,
+    network_type: networkType, 
     app_ver_name: appVerName,
     app_ver_code: appVerCode,
     device_type: deviceType,
@@ -26,7 +26,6 @@ const DeviceDetails = async () => {
     json: 'true',
   };
 
-  // console.log('Device Details:', userDetails);
   return userDetails;
 };
 

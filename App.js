@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler'; // ✅ keep this early as well
+import 'react-native-reanimated'; // ✅ must be FIRST (before any React import)
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
@@ -15,6 +17,8 @@ import SpInAppUpdates, {
 } from 'sp-react-native-in-app-updates';
 import mobileAds from 'react-native-google-mobile-ads';
 import { initDeviceId } from './src/deviceDetails/DeviceId';
+import FullScreenBook from './src/screens/FullScreenBook';
+import Way2NewsBendWorking from './src/screens/Way2NewsBendWorking';
 
 
 const AppContent = () => {
@@ -24,10 +28,8 @@ const AppContent = () => {
     <View
       style={{
         flex: 1,
-         paddingTop: insets.top,
-        //  paddingBottom: insets.bottom,
-       
-       
+        paddingTop: insets.top,
+
       }}
     >
       <StatusBar
@@ -45,17 +47,12 @@ const AppContent = () => {
 };
 
 const App = () => {
-
-  
   useEffect(() => {
-    // Initialize push notifications
-
-      // Initialize Google Mobile Ads
-  mobileAds()
-  .initialize()
-  .then(() => {
-    console.log('Google Mobile Ads initialized');
-  });
+    mobileAds()
+      .initialize()
+      .then(() => {
+        console.log('Google Mobile Ads initialized');
+      });
 
     // In-app update logic for Android
     const checkForUpdates = async () => {
@@ -83,7 +80,7 @@ const App = () => {
 
   useEffect(() => {
     initDeviceId()
-  },[])
+  }, [])
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -10,6 +10,7 @@ const LatestNotification = ({ route }) => {
   const [isAdVisible, setIsAdVisible] = useState(true);
 
   const { api_link } = route?.params || {};
+  console.log("api_link",api_link)
 
   const deviceId = getDeviceId();
 
