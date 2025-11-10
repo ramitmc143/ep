@@ -30,11 +30,12 @@
     "npm": "^11.3.0",
     "react": "19.0.0",
     "react-native": "0.79.0",
-    "react-native-blob-util": "^0.21.2",
+    "react-native-blob-util": "^0.21.3",
     "react-native-device-info": "^14.0.4",
     "react-native-drawer-layout": "^4.1.6",
     "react-native-gesture-handler": "^2.25.0",
     "react-native-google-mobile-ads": "^14.7.2",
+    "react-native-linear-gradient": "^2.8.3",
     "react-native-pdf": "^6.7.7",
     "react-native-reanimated": "^3.17.4",
     "react-native-responsive-screen": "^1.4.2",
@@ -46,6 +47,7 @@
     "react-native-view-shot": "^4.0.3",
     "react-native-webview": "^13.13.5",
     "react-redux": "^9.2.0",
+    "redux-persist": "^6.0.0",
     "sp-react-native-in-app-updates": "^1.4.1"
   },
   "devDependencies": {

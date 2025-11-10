@@ -1,10 +1,46 @@
-pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
-plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+// pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+// plugins { id("com.facebook.react.settings") }
+// extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+// rootProject.name = 'eenadupratibha'
+// include ':app'
+// includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// include ':react-native-webview'
+// project(':react-native-webview').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-webview/android')
+
+
+
+// ✅ Plugin management — ensures Gradle can find Android, Kotlin, and Compose plugins
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+
+    // Include the React Native Gradle plugin
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+}
+
+// ✅ Apply the React Native settings plugin
+plugins {
+    id("com.facebook.react.settings")
+}
+
+// ✅ Configure autolinking for React Native libraries
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand()
+}
+
+// ✅ Project name
 rootProject.name = 'eenadupratibha'
+
+// ✅ Include the app module
 include ':app'
+
+// ✅ Include React Native Gradle plugin build
 includeBuild('../node_modules/@react-native/gradle-plugin')
 
+// ✅ Include additional React Native libraries
 include ':react-native-webview'
 project(':react-native-webview').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-webview/android')
-

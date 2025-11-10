@@ -12,3 +12,4 @@ export default function App() {
     </SafeAreaView>
   );
 }
+  // pdfUrl = 'https://www.sldttc.org/allpdf/21583473018.pdf'

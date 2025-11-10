@@ -5,6 +5,9 @@ import language_id_status_reducer from '../language_id_status_slice/language_id_
 import dataOfCategoryOFNotificationReducer from '../slices/dataSlice'
 import selectedCategoryReducer from '../slices/selectedCategorySlice';
 import selectedSortReducer from '../slices/selectedSortSlice';
+import preferencesReducer from '../slices/preferencesSlice';
+
+
 
 
 
@@ -13,10 +16,10 @@ export const Store = configureStore({
     language: languageReducer,
     selectedScreen: selectedScreenReducer,
     language_id_status: language_id_status_reducer,
-    dataOfCategoryOFNotification : dataOfCategoryOFNotificationReducer,
+    dataOfCategoryOFNotification: dataOfCategoryOFNotificationReducer,
     selectedCategory: selectedCategoryReducer,
     selectedSort: selectedSortReducer,
-    
+    preferences: preferencesReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

@@ -15,6 +15,10 @@ import SpInAppUpdates, {
 } from 'sp-react-native-in-app-updates';
 import mobileAds from 'react-native-google-mobile-ads';
 import { initDeviceId } from './src/deviceDetails/DeviceId';
+import SampleEbook from './src/test/SampleEbook';
+import PageFlipView from './src/TestDY/PageFlipView';
+
+
 
 
 const AppContent = () => {
@@ -24,12 +28,9 @@ const AppContent = () => {
     <View
       style={{
         flex: 1,
-         paddingTop: insets.top,
+        paddingTop: insets.top,
         //  paddingBottom: insets.bottom,
-       
-       
-      }}
-    >
+      }}>
       <StatusBar
         hidden={false}
         barStyle="dark-content"
@@ -86,14 +87,16 @@ const App = () => {
   },[])
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{flex: 1}}>
       <SafeAreaProvider>
-        <AppContent />
+        {/* <AppContent /> */}
+        {/* <SampleEbook /> */}
+        <PageFlipView />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 };
 
-export default App;
+export default App; 
 
 

@@ -48,6 +48,7 @@ import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PushNotificationSetup from '../push_notification/PushNotificationSetup';
 import notifee from '@notifee/react-native';
+import EbookView from '../screens/Ebook';
 
 const RootStack = createNativeStackNavigator();
 const BottomTab = createBottomTabNavigator();
@@ -123,6 +124,7 @@ const screenComponentMap = {
   14: CareerAndCoursesScreen,
   15: APPSCScreen,
   16: TGPSCScreen,
+  17:EbookView
 };
 
 const getComponentByName = (api_link, common_id) => {

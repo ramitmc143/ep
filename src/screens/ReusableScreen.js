@@ -32,7 +32,8 @@ import BannerAdComponent from '../MobileAds/BannerAdComponent';
 import InterstitialAdComponent from '../MobileAds/InterstitialAdComponent';
 import DeviceInfo from 'react-native-device-info';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {getDeviceId} from '../deviceDetails/DeviceId';
+import { getDeviceId } from '../deviceDetails/DeviceId';
+import EbookView from './Ebook';
 
 const ReusableScreen = ({
   apiLink,
@@ -97,6 +98,9 @@ const lastScrollIndex = useRef(0);
   const [showAd, setShowAd] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [lastTriggeredAdIndex, setLastTriggeredAdIndex] = useState(null);
+  const [scrollEnabledForEbook, setScrollEnabledForEbook] = useState(true);
+
+  
 
   const itemGap = ADDetails?.FullAds?.itemsgap ?? 6;
   console.log('itemGap', itemGap); // fallback to 6 if undefined
@@ -260,139 +264,282 @@ const lastScrollIndex = useRef(0);
     setScrollEnabled(true);
   };
 
+  // const renderItem = useCallback(
+  //   ({item, index}) => (
+  //     <View style={styles.card}>
+  //       <View style={styles.cardInner}>
+  //         <ScrollView
+  //           style={styles.scrollArea}
+  //           contentContainerStyle={styles.cardContent}>
+  //           <ViewShot
+  //             ref={ref => (viewShotRefs.current[index] = ref)}
+  //             options={{format: 'jpg', quality: 0.9}}
+  //             style={{backgroundColor: 'white'}}>
+  //             <TouchableOpacity
+  //               activeOpacity={0.8}
+  //               onPress={() =>
+  //                 navigation.navigate('CustomWebView', {
+  //                   url: item[dataKeyMap.longDesc],
+  //                   title: item.sect_name,
+  //                 })
+  //               }>
+  //               <View style={styles.imageContainer}>
+  //                 {loadingImage && (
+  //                   <Image
+  //                     source={require('../Assets/maskImage.png')}
+  //                     style={[styles.image, {opacity: 0.2}]}
+  //                   />
+  //                 )}
+  //                 <Image
+  //                   source={{
+  //                     uri:
+  //                       item[dataKeyMap.image] ||
+  //                       'https://pratibhaassets.eenadu.net/uploadimages/thumbicon1.png',
+  //                   }}
+  //                   style={[styles.image, loading && styles.hiddenImage]}
+  //                   onLoadStart={() => setLoadingImage(true)}
+  //                   onLoadEnd={() => setLoadingImage(false)}
+  //                 />
+  //               </View>
+  //             </TouchableOpacity>
+
+  //             {shareImage && shareItemIndex === index && (
+  //               <Image
+  //                 source={require('../Assets/shareStripImage.png')}
+  //                 resizeMode="stretch"
+  //                 style={{height: hp('4%'), width: wp('100%')}}
+  //               />
+  //             )}
+
+  //             <View style={styles.fixedContainer}>
+  //               <View style={styles.titleDescriptionWrapper}>
+  //                 <TouchableOpacity
+  //                   activeOpacity={0.8}
+  //                   onPress={() =>
+  //                     navigation.navigate('CustomWebView', {
+  //                       url: item[dataKeyMap.longDesc],
+  //                       title: item.sect_name,
+  //                     })
+  //                   }>
+  //                   <Text
+  //                     style={styles.title}
+  //                     numberOfLines={2}
+  //                     adjustsFontSizeToFit
+  //                     minimumFontScale={0.85}>
+  //                     {item[dataKeyMap.title]}
+  //                   </Text>
+  //                 </TouchableOpacity>
+
+  //                 <TouchableOpacity
+  //                   activeOpacity={0.8}
+  //                   onPress={() =>
+  //                     navigation.navigate('CustomWebView', {
+  //                       url: item[dataKeyMap.longDesc],
+  //                       title: item.sect_name,
+  //                     })
+  //                   }>
+  //                   <Text style={styles.description} numberOfLines={5}>
+  //                     {item[dataKeyMap.shortDesc]}
+  //                   </Text>
+  //                 </TouchableOpacity>
+  //               </View>
+  //             </View>
+  //           </ViewShot>
+  //         </ScrollView>
+
+  //         {/* ✅ Fixed Footer at bottom of card */}
+
+  //         <View
+  //           style={[
+  //             styles.footerRowFixed,
+  //             {marginBottom:marginBottomValue}
+
+  //           ]}>
+  //           <View style={styles.footerButton}>
+  //             <Icon
+  //               name="clock-outline"
+  //               size={moderateScale(16)}
+  //               color="#007BFF"
+  //             />
+  //             <Text style={styles.footerButtonText}>
+  //               {item[dataKeyMap.date]}
+  //             </Text>
+  //           </View>
+
+  //           <TouchableOpacity
+  //             onPress={() => handleShare(item, index)}
+  //             style={styles.footerButton}>
+  //             <Icon
+  //               name="share-variant"
+  //               size={moderateScale(16)}
+  //               color="#007BFF"
+  //             />
+  //           </TouchableOpacity>
+
+  //           <TouchableOpacity
+  //             onPress={() =>
+  //               navigation.navigate('CustomWebView', {
+  //                 url: item[dataKeyMap.longDesc],
+  //                 title: item.sect_name,
+  //               })
+  //             }
+  //             style={styles.footerButton}>
+  //             <Icon
+  //               name="link-variant"
+  //               size={moderateScale(16)}
+  //               color="#007BFF"
+  //             />
+  //             <Text style={styles.footerButtonText}> {readMore_text}</Text>
+  //           </TouchableOpacity>
+  //         </View>
+  //       </View>
+  //     </View>
+  //   ),
+  //   [readMore_text, loadingImage, shareImage, shareItemIndex, isAdVisible],
+  // );
+
   const renderItem = useCallback(
     ({item, index}) => (
-      <View style={styles.card}>
-        <View style={styles.cardInner}>
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.cardContent}>
-            <ViewShot
-              ref={ref => (viewShotRefs.current[index] = ref)}
-              options={{format: 'jpg', quality: 0.9}}
-              style={{backgroundColor: 'white'}}>
+      <>
+        {/* Your existing news item card */}
+        <View style={styles.card}>
+          <View style={styles.cardInner}>
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.cardContent}>
+              <ViewShot
+                ref={ref => (viewShotRefs.current[index] = ref)}
+                options={{format: 'jpg', quality: 0.9}}
+                style={{backgroundColor: 'white'}}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    navigation.navigate('CustomWebView', {
+                      url: item[dataKeyMap.longDesc],
+                      title: item.sect_name,
+                    })
+                  }>
+                  <View style={styles.imageContainer}>
+                    {loadingImage && (
+                      <Image
+                        source={require('../Assets/maskImage.png')}
+                        style={[styles.image, {opacity: 0.2}]}
+                      />
+                    )}
+                    <Image
+                      source={{
+                        uri:
+                          item[dataKeyMap.image] ||
+                          'https://pratibhaassets.eenadu.net/uploadimages/thumbicon1.png',
+                      }}
+                      style={[styles.image, loading && styles.hiddenImage]}
+                      onLoadStart={() => setLoadingImage(true)}
+                      onLoadEnd={() => setLoadingImage(false)}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                {shareImage && shareItemIndex === index && (
+                  <Image
+                    source={require('../Assets/shareStripImage.png')}
+                    resizeMode="stretch"
+                    style={{height: hp('4%'), width: wp('100%')}}
+                  />
+                )}
+
+                <View style={styles.fixedContainer}>
+                  <View style={styles.titleDescriptionWrapper}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        navigation.navigate('CustomWebView', {
+                          url: item[dataKeyMap.longDesc],
+                          title: item.sect_name,
+                        })
+                      }>
+                      <Text
+                        style={styles.title}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.85}>
+                        {item[dataKeyMap.title]}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        navigation.navigate('CustomWebView', {
+                          url: item[dataKeyMap.longDesc],
+                          title: item.sect_name,
+                        })
+                      }>
+                      <Text style={styles.description} numberOfLines={5}>
+                        {item[dataKeyMap.shortDesc]}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ViewShot>
+            </ScrollView>
+
+            {/* ✅ Fixed Footer */}
+            <View
+              style={[
+                styles.footerRowFixed,
+                {marginBottom: marginBottomValue},
+              ]}>
+              <View style={styles.footerButton}>
+                <Icon
+                  name="clock-outline"
+                  size={moderateScale(16)}
+                  color="#007BFF"
+                />
+                <Text style={styles.footerButtonText}>
+                  {item[dataKeyMap.date]}
+                </Text>
+              </View>
+
               <TouchableOpacity
-                activeOpacity={0.8}
+                onPress={() => handleShare(item, index)}
+                style={styles.footerButton}>
+                <Icon
+                  name="share-variant"
+                  size={moderateScale(16)}
+                  color="#007BFF"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={() =>
                   navigation.navigate('CustomWebView', {
                     url: item[dataKeyMap.longDesc],
                     title: item.sect_name,
                   })
-                }>
-                <View style={styles.imageContainer}>
-                  {loadingImage && (
-                    <Image
-                      source={require('../Assets/maskImage.png')}
-                      style={[styles.image, {opacity: 0.2}]}
-                    />
-                  )}
-                  <Image
-                    source={{
-                      uri:
-                        item[dataKeyMap.image] ||
-                        'https://pratibhaassets.eenadu.net/uploadimages/thumbicon1.png',
-                    }}
-                    style={[styles.image, loading && styles.hiddenImage]}
-                    onLoadStart={() => setLoadingImage(true)}
-                    onLoadEnd={() => setLoadingImage(false)}
-                  />
-                </View>
-              </TouchableOpacity>
-
-              {shareImage && shareItemIndex === index && (
-                <Image
-                  source={require('../Assets/shareStripImage.png')}
-                  resizeMode="stretch"
-                  style={{height: hp('4%'), width: wp('100%')}}
+                }
+                style={styles.footerButton}>
+                <Icon
+                  name="link-variant"
+                  size={moderateScale(16)}
+                  color="#007BFF"
                 />
-              )}
-
-              <View style={styles.fixedContainer}>
-                <View style={styles.titleDescriptionWrapper}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() =>
-                      navigation.navigate('CustomWebView', {
-                        url: item[dataKeyMap.longDesc],
-                        title: item.sect_name,
-                      })
-                    }>
-                    <Text
-                      style={styles.title}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}>
-                      {item[dataKeyMap.title]}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() =>
-                      navigation.navigate('CustomWebView', {
-                        url: item[dataKeyMap.longDesc],
-                        title: item.sect_name,
-                      })
-                    }>
-                    <Text style={styles.description} numberOfLines={5}>
-                      {item[dataKeyMap.shortDesc]}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ViewShot>
-          </ScrollView>
-
-          {/* ✅ Fixed Footer at bottom of card */}
-
-          <View
-            style={[
-              styles.footerRowFixed,
-              {marginBottom:marginBottomValue}
-
-            ]}>
-            <View style={styles.footerButton}>
-              <Icon
-                name="clock-outline"
-                size={moderateScale(16)}
-                color="#007BFF"
-              />
-              <Text style={styles.footerButtonText}>
-                {item[dataKeyMap.date]}
-              </Text>
+                <Text style={styles.footerButtonText}> {readMore_text}</Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={() => handleShare(item, index)}
-              style={styles.footerButton}>
-              <Icon
-                name="share-variant"
-                size={moderateScale(16)}
-                color="#007BFF"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('CustomWebView', {
-                  url: item[dataKeyMap.longDesc],
-                  title: item.sect_name,
-                })
-              }
-              style={styles.footerButton}>
-              <Icon
-                name="link-variant"
-                size={moderateScale(16)}
-                color="#007BFF"
-              />
-              <Text style={styles.footerButtonText}> {readMore_text}</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </View>
+
+        {/* ✅ Render EbookView only if currentIndex matches this item */}
+        {(index + 1) % 3 === 0 && currentIndex === index && (
+          <View style={{height: hp('82%'), backgroundColor: '#fff'}}>
+            <EbookView setScrollEnabledForEbook={setScrollEnabledForEbook} />
+          </View>
+        )}
+      </>
     ),
     [readMore_text, loadingImage, shareImage, shareItemIndex, isAdVisible],
   );
+
 
   if (loading) {
     return (
@@ -432,7 +579,7 @@ const lastScrollIndex = useRef(0);
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        
+        scrollEnabledForEbook={scrollEnabledForEbook}
       />
       {showAd && (
         <InterstitialAdComponent
@@ -440,19 +587,18 @@ const lastScrollIndex = useRef(0);
           OnHandleCancel_ad={handleAdClosed}
         />
       )}
-     <View style={styles.bannerAds}>
-  {isAdVisible ? (
-    <BannerAdComponent
-      key={bannerKey}
-      ADDetails={ADDetails}
-      onAdLoaded={() => setIsAdVisible(true)}
-      onAdFailedToLoad={() => setIsAdVisible(false)}
-    />
-  ) : (
-    <View style={styles.adPlaceholder} />
-  )}
-</View>
-
+      <View style={styles.bannerAds}>
+        {isAdVisible ? (
+          <BannerAdComponent
+            key={bannerKey}
+            ADDetails={ADDetails}
+            onAdLoaded={() => setIsAdVisible(true)}
+            onAdFailedToLoad={() => setIsAdVisible(false)}
+          />
+        ) : (
+          <View style={styles.adPlaceholder} />
+        )}
+      </View>
     </SafeAreaView>
   );
 };

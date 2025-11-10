@@ -1,3 +1,6 @@
+
+
+
 buildscript {
     ext {
         buildToolsVersion = "35.0.0"
@@ -6,6 +9,7 @@ buildscript {
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
         kotlinVersion =   "2.0.21"
+        // kotlinVersion = '1.8.22'
         cmakeVersion= "3.22.1"
     }
     repositories {
@@ -24,5 +28,14 @@ buildscript {
         classpath 'com.google.gms:google-services:4.3.15' 
     }
 }
+
+// 👇 ADD THIS AT THE VERY TOP OF android/build.gradle
+plugins {
+    id("com.android.application") version "8.5.2" apply false
+    id("com.android.library") version "8.5.2" apply false
+    id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
+}
+
 
 apply plugin: "com.facebook.react.rootproject"
