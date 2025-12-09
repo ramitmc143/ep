@@ -5,220 +5,268 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView
 } from "react-native";
+
+import Ionicons from "react-native-vector-icons/Ionicons";
+
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp
 } from "react-native-responsive-screen";
 
-export default function CategoryDetailScreen({ route, navigation }) {
-  const { sect_id } = route.params;
-  const [data, setData] = useState({});
+/* COLORS */
+const COLORS = {
+  tsBlue: "#187DC1",
+  tsRed: "#ED2532",
+  tsGreen: "#19A356",
+  tsCyan: "#1CA9A0",
+  apOrange: "#FBA93A",
+  apSkyBlue: "#18A4DF",
+  apPurple: "#8950A1",
+  apGreen: "#1BAA58"
+};
+
+const getSubCatColor = (stateName, index) => {
+  if (stateName === "Telangana") {
+    return [COLORS.tsBlue, COLORS.tsRed, COLORS.tsGreen, COLORS.tsCyan][index];
+  }
+  return [
+    COLORS.apOrange,
+    COLORS.apSkyBlue,
+    COLORS.apPurple,
+    COLORS.apGreen
+  ][index];
+};
+
+export default function CategoryDetailsScreen({ route, navigation }) {
+  const {
+    sect_id,
+    section_name,
+    cat_id,
+    year,
+    state_id,
+    state_name,
+    lang_id
+  } = route.params;
+
+  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState(null);  // ✅ year filter state
+
+  // 🟢 Language toggle state
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    lang_id === 1 ? "English" : "Telugu"
+  );
 
   useEffect(() => {
-    fetchDetails();
-  }, []);
+    fetchSubCategories();
+  }, [selectedLanguage]); // re-fetch when language changes
 
-  const fetchDetails = async () => {
+  const fetchSubCategories = async () => {
     try {
+      setLoading(true);
+
+      const body = {
+        device_id: 123,
+        sect_id,
+        stateid: state_id,
+        lang_id: selectedLanguage === "English" ? 1 : 2,
+        year,
+        cat_id
+      };
+
+      console.log("📤 CATEGORY API BODY:", body);
+
       const response = await fetch(
         "https://pratibha.eenadu.net/pratibha_services/api/getModelPapers",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            device_id: 123,
-            sect_id: parseInt(sect_id)
-          })
+          body: JSON.stringify(body)
         }
       );
 
       const json = await response.json();
-      const list = json.latest_Notification || [];
+      console.log("📥 CATEGORY API RESPONSE:", json);
 
-      const grouped = {};
+      const item = json.latest_Notification?.[0];
+      if (!item) return;
 
-      list.forEach(item => {
-        const year = item.year;
-        const state = item.doc_path?.includes("TG") ? "Telangana" : "Andhra Pradesh";
-        const category = item.cat_name;
-        const categoryTel = item.cat_name_telugu;
-        const subcat = item.sub_cat_name.trim();
-        const subcatTel = item.sub_cat_name_telugu;
-        const medium = item.doc_language === "1" ? "English Medium" : "Telugu Medium";
-        const mediumTel = item.doc_language === "1" ? "ఆంగ్ల మాధ్యమం" : "తెలుగు మాధ్యమం";
+      const total = Number(item.sub_cat_count);
+      const arr = [];
 
-        if (!grouped[year]) grouped[year] = {};
-        if (!grouped[year][state]) grouped[year][state] = {};
-        if (!grouped[year][state][category]) grouped[year][state][category] = { tel: categoryTel, subs: {} };
-        if (!grouped[year][state][category].subs[subcat])
-          grouped[year][state][category].subs[subcat] = { tel: subcatTel, mediums: [] };
-
-        grouped[year][state][category].subs[subcat].mediums.push({
-          medium,
-          mediumTel,
+      for (let i = 1; i <= total; i++) {
+        arr.push({
+          sub_cat_id: item[`sub_cat_id_${i}`],
+          sub_cat_name: item[`sub_cat_name_${i}`]
         });
-      });
+      }
 
-      setData(grouped);
-    } catch (error) {
-      console.log("Error fetching details:", error);
+      setSubCategories(arr);
+    } catch (err) {
+      console.log("❌ CATEGORY FETCH ERROR:", err);
     }
-    setLoading(false);
-  };
 
-  const toggleYear = (year) => {
-    setSelectedYear(prev => prev === year ? null : year);
+    setLoading(false);
   };
 
   if (loading) {
     return (
-      <View style={{ flex:1, justifyContent:"center", alignItems:"center" }}>
+      <View style={styles.loader}>
         <ActivityIndicator size="large" color="#0054A6" />
-        <Text>Loading...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
-  const years = Object.keys(data).sort((a,b)=>b-a);
-
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
 
-      {/* ✅ Year Filter Buttons */}
-      <View style={styles.yearFilterContainer}>
-        {years.map(year => (
-          <TouchableOpacity
-            key={year}
-            style={[styles.yearBtn, selectedYear === year && styles.yearBtnActive]}
-            onPress={() => toggleYear(year)}
-          >
-            <Text style={[styles.yearBtnText, selectedYear === year && styles.yearBtnTextActive]}>
-              {year}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* HEADER */}
+      <View style={styles.header}>
+
+        {/* Back */}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={wp(7)} color="#003977" />
+        </TouchableOpacity>
+
+        {/* TITLE */}
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Text style={styles.headerTitle}>{section_name}</Text>
+          <Text style={styles.headerSub}>{state_name}</Text>
+        </View>
+
+        {/* Language Toggle */}
+        <TouchableOpacity
+          style={styles.langToggle}
+          onPress={() =>
+            setSelectedLanguage(
+              selectedLanguage === "English" ? "Telugu" : "English"
+            )
+          }
+        >
+          <Text style={styles.langText}>
+            {selectedLanguage === "English" ? "EN" : "TE"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {years
-        .filter(year => !selectedYear || selectedYear === year)  // ✅ Year filter logic
-        .map(year => (
-        <View key={year}>
-          
-          <Text style={styles.year}>{year}</Text>
-
-          {["Telangana","Andhra Pradesh"].map(state => (
-            data[year][state] && (
-              <View key={state} style={styles.block}>
-                <Text style={styles.state}>{state}</Text>
-
-                {Object.keys(data[year][state]).map(category => {
-                  const catItem = data[year][state][category];
-                  return (
-                    <View key={category} style={{paddingBottom:hp(1)}}>
-
-                      <Text style={styles.section}>
-                        {category}
-                      </Text>
-                      <Text style={styles.sectionTel}>
-                        {catItem.tel}
-                      </Text>
-
-                      {Object.keys(catItem.subs).map(sub => {
-                        const subObj = catItem.subs[sub];
-                        return (
-                          <View key={sub}>
-                            <Text style={styles.subcat}>{sub}</Text>
-                            <Text style={styles.subcatTel}>{subObj.tel}</Text>
-
-                            <View style={styles.grid}>
-                              {subObj.mediums.map((m, i) => (
-                                <TouchableOpacity
-                                  key={i}
-                                  style={styles.card}
-                                  onPress={() =>
-                                    navigation.navigate("SubjectBooksScreen", {
-                                      sect_id,
-                                      year,
-                                      state,
-                                      category,
-                                      categoryTel: catItem.tel,
-                                      sub,
-                                      subTel: subObj.tel,
-                                      medium: m.medium
-                                    })
-                                  }
-                                >
-                                  <Text style={styles.cardText}>{sub}</Text>
-                                  <Text style={styles.cardTextSmall}>({m.medium})</Text>
-
-                                  <Text style={styles.cardTextTel}>{subObj.tel}</Text>
-                                  <Text style={styles.cardTextSmallTel}>({m.mediumTel})</Text>
-
-                                  <Text style={styles.stateSmall}>{state}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-
-                          </View>
-                        );
-                      })}
-
-                    </View>
-                  );
-                })}
-
-              </View>
-            )
+      <ScrollView contentContainerStyle={{ paddingHorizontal: wp(4) }}>
+        <View style={styles.grid}>
+          {subCategories.map((item, index) => (
+            <TouchableOpacity
+              key={item.sub_cat_id}
+              style={[
+                styles.card,
+                { backgroundColor: getSubCatColor(state_name, index) }
+              ]}
+              onPress={() => {
+                navigation.navigate("SubjectBooksScreen", {
+                  sect_id,
+                  section_name,
+                  sub_cat_id: item.sub_cat_id,
+                  sub_cat_name: item.sub_cat_name,
+                  cat_id,
+                  year,
+                  state_id,
+                  state_name,
+                  lang_id: selectedLanguage === "English" ? 1 : 2
+                });
+              }}
+            >
+              <Text style={styles.cardText}>{item.sub_cat_name}</Text>
+            </TouchableOpacity>
           ))}
-
         </View>
-      ))}
 
-      <View style={{height:hp(3)}}/>
-    </ScrollView>
+        <View style={{ height: hp(3) }} />
+      </ScrollView>
+
+    </SafeAreaView>
   );
 }
 
+/* -----------------------------------------
+    STYLES
+------------------------------------------ */
+
 const styles = StyleSheet.create({
-  container:{ flex:1, padding:wp(3), backgroundColor:"#fff" },
-
-  /* ✅ Year Filter Styles */
-  yearFilterContainer:{
-    flexDirection:"row",
-    flexWrap:"wrap",
-    justifyContent:"center",
-    marginBottom:hp(2)
+  container: {
+    flex: 1,
+    backgroundColor: "#F7F9FC"
   },
-  yearBtn:{
-    paddingVertical:hp(0.8),
-    paddingHorizontal:wp(4),
-    borderRadius:wp(2),
-    borderWidth:1.5,
-    borderColor:"#0054A6",
-    marginHorizontal:wp(1),
-    marginBottom:hp(1),
-    backgroundColor:"#fff"
-  },
-  yearBtnActive:{ backgroundColor:"#0054A6" },
-  yearBtnText:{ fontSize:wp(3.6), fontWeight:"600", color:"#0054A6" },
-  yearBtnTextActive:{ color:"#fff" },
 
-  year:{ fontSize:wp(6), fontWeight:"800", color:"#D32F2F", textAlign:"center", marginVertical:hp(2) },
-  block:{ borderWidth:1, borderColor:"#ccc", borderRadius:wp(2), marginBottom:hp(2) },
-  state:{ backgroundColor:"#0054A6", color:"#fff", fontWeight:"700", fontSize:wp(4.6), textAlign:"center", paddingVertical:hp(1), borderTopLeftRadius:wp(2), borderTopRightRadius:wp(2) },
-  section:{ fontSize:wp(4.5), fontWeight:"700", textAlign:"center", marginTop:hp(1) },
-  sectionTel:{ fontSize:wp(4), fontWeight:"600", textAlign:"center", color:"#008000" },
-  subcat:{ fontSize:wp(4), fontWeight:"600", textAlign:"center", marginTop:hp(1) },
-  subcatTel:{ fontSize:wp(3.8), fontWeight:"600", textAlign:"center", color:"#008000", marginBottom:hp(1) },
-  grid:{ flexDirection:"row", flexWrap:"wrap", justifyContent:"space-between", paddingHorizontal:wp(2) },
-  card:{ width:"48%", backgroundColor:"#E6F0FA", paddingVertical:hp(2), marginBottom:hp(2), borderRadius:wp(2), borderWidth:1.5, borderColor:"#0054A6" },
-  cardText:{ textAlign:"center", fontWeight:"700", fontSize:wp(3.5), color:"#0054A6" },
-  cardTextSmall:{ textAlign:"center", fontWeight:"500", fontSize:wp(3), color:"#333" },
-  cardTextTel:{ textAlign:"center", fontWeight:"700", fontSize:wp(3.4), color:"#008000", marginTop:3 },
-  cardTextSmallTel:{ textAlign:"center", fontWeight:"500", fontSize:wp(3), color:"#008000" },
-  stateSmall:{ textAlign:"center", fontSize:wp(3), marginTop:5, color:"#555" }
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(4),
+    backgroundColor: "#fff",
+    elevation: 4,
+    marginBottom: hp(1)
+  },
+
+  headerTitle: {
+    fontSize: wp(5.2),
+    fontWeight: "700",
+    color: "#003977"
+  },
+
+  headerSub: {
+    fontSize: wp(3.5),
+    color: "#666",
+    marginTop: hp(0.4)
+  },
+
+  langToggle: {
+    width: wp(12),
+    height: hp(4),
+    backgroundColor: "#0054A6",
+    borderRadius: wp(2),
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  langText: {
+    color: "#fff",
+    fontSize: wp(4),
+    fontWeight: "700"
+  },
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between"
+  },
+
+  card: {
+    width: "47%",
+    paddingVertical: hp(2.8),
+    marginBottom: hp(2),
+    borderRadius: wp(3),
+    elevation: 6,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  cardText: {
+    fontSize: wp(4.4),
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center"
+  },
+
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  loadingText: {
+    marginTop: hp(1),
+    fontSize: wp(4),
+    fontWeight: "600",
+    color: "#003977"
+  }
 });

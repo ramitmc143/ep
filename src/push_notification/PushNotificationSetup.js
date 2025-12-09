@@ -1,14 +1,14 @@
-import {useEffect} from 'react';
+import { useEffect } from 'react';
 import messaging from '@react-native-firebase/messaging';
 import notifee, {
   AndroidImportance,
   AndroidStyle,
   EventType,
 } from '@notifee/react-native';
-import {useNavigation} from '@react-navigation/native';
-import {navigationRef} from '../navigation/NavigationService';
+import { useNavigation } from '@react-navigation/native';
+import { navigationRef } from '../navigation/NavigationService';
 import DeviceDetails from '../deviceDetails/DeviceDetails';
-import {SendFcmToBackend} from '../sendFcmToBackend/SendFcmToBackend';
+import { SendFcmToBackend } from '../sendFcmToBackend/SendFcmToBackend';
 
 const PushNotificationSetup = () => {
   const navigation = useNavigation();
@@ -25,15 +25,15 @@ const PushNotificationSetup = () => {
     const unsubscribeOnMessage = messaging().onMessage(async remoteMessage => {
       console.log('🔔 Foreground FCM Message Received:', remoteMessage);
 
-      const {newstitle} = remoteMessage.data || {};
-      const {body} = remoteMessage.notification || {};
+      const { newstitle } = remoteMessage.data || {};
+      const { body } = remoteMessage.notification || {};
       const newslink =
-      remoteMessage.data?.newslink ||
-      remoteMessage.notification?.android?.clickAction || ''; // fallback
+        remoteMessage.data?.newslink ||
+        remoteMessage.notification?.android?.clickAction || ''; // fallback
       const image =
-      remoteMessage.data?.image ||
-      remoteMessage.notification?.android?.imageUrl || '';
-      
+        remoteMessage.data?.image ||
+        remoteMessage.notification?.android?.imageUrl || '';
+
       await notifee.cancelAllNotifications();
       await notifee.displayNotification({
         title: newstitle || 'Notification',
@@ -49,45 +49,45 @@ const PushNotificationSetup = () => {
             id: 'default',
           },
         },
-        data: {newslink},
+        data: { newslink },
       });
     });
 
     const unsubscribeOnNotificationOpenedApp =
       messaging().onNotificationOpenedApp(remoteMessage => {
         console.log('📥 Notification opened from background:', remoteMessage);
-        const {newslink} = remoteMessage.data || {};
+        const { newslink } = remoteMessage.data || {};
         if (newslink) {
-          navigation.navigate('CustomWebView', {url: newslink});
+          navigation.navigate('CustomWebView', { url: newslink });
         }
       });
 
-   let isNavigating = false;
+    let isNavigating = false;
 
-const unsubscribeNotifeeForeground = notifee.onForegroundEvent(
-  async ({ type, detail }) => {
-    console.log('📲 Foreground Notification Tap Event:', { type, detail });
+    const unsubscribeNotifeeForeground = notifee.onForegroundEvent(
+      async ({ type, detail }) => {
+        console.log('📲 Foreground Notification Tap Event:', { type, detail });
 
-    if (
-      type === EventType.PRESS &&
-      detail.notification?.data?.newslink &&
-      !isNavigating
-    ) {
-      isNavigating = true;
-      try {
-        await navigation.navigate('CustomWebView', {
-          url: detail.notification.data.newslink,
-        });
-      } catch (error) {
-        console.log('Navigation error:', error);
-      } finally {
-        setTimeout(() => {
-          isNavigating = false;
-        }, 1000); // Slight delay to prevent rapid repeat navigation
+        if (
+          type === EventType.PRESS &&
+          detail.notification?.data?.newslink &&
+          !isNavigating
+        ) {
+          isNavigating = true;
+          try {
+            await navigation.navigate('CustomWebView', {
+              url: detail.notification.data.newslink,
+            });
+          } catch (error) {
+            console.log('Navigation error:', error);
+          } finally {
+            setTimeout(() => {
+              isNavigating = false;
+            }, 1000); // Slight delay to prevent rapid repeat navigation
+          }
+        }
       }
-    }
-  }
-);
+    );
 
 
     return () => {

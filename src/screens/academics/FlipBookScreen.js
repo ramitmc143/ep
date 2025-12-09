@@ -1,49 +1,152 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions, Image } from 'react-native';
-import PageFlipper from '@thanhdong272/react-native-page-flipper';
+import React from "react";
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Image,
+  TouchableOpacity,
+  Text,
+} from "react-native";
 
-const { width, height } = Dimensions.get('window');
+import PageFlipper from "@thanhdong272/react-native-page-flipper";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import ImageZoom from "react-native-image-pan-zoom";
 
-const pages = [
-  'https://i.postimg.cc/XND1h0bV/e-book-pages-to-jpg-0001.jpg',
-  'https://i.postimg.cc/tJV3ww37/e-book-pages-to-jpg-0002.jpg',
-  'https://i.postimg.cc/fRsP7fsH/e-book-pages-to-jpg-0003.jpg',
-  'https://i.postimg.cc/hvxCTf54/e-book-pages-to-jpg-0004.jpg',
-  'https://i.postimg.cc/R0FXGPDh/e-book-pages-to-jpg-0005.jpg',
-  'https://i.postimg.cc/fLd7g1j9/e-book-pages-to-jpg-0006.jpg',
-  'https://i.postimg.cc/Hx831rH7/e-book-pages-to-jpg-0007.jpg',
-  'https://i.postimg.cc/qq8LgWNq/e-book-pages-to-jpg-0008.jpg',
-  'https://i.postimg.cc/4yZc2y3N/e-book-pages-to-jpg-0009.jpg',
-  'https://i.postimg.cc/zG3gc9qv/e-book-pages-to-jpg-0010.jpg',
-];
+const { width, height } = Dimensions.get("window");
 
-export default function CurlBook() {
+const TOP_HEADER = height * 0.06;
+const FOOTER = height * 0.09;
+const FLIP_HEIGHT = height - TOP_HEADER - FOOTER;
+
+export default function FlipBookScreen({ route, navigation }) {
+  const { images = [], title = "Model Paper" } = route.params || {};
+
+  const totalPages = images?.length || 0;
+
   return (
-    <View style={styles.container}>
-      <PageFlipper
-        data={pages}
-        pageSize={{ width, height }}
-        renderPage={(uri) => (
-          <Image
-            source={{ uri }}
-            style={styles.pageImage}
-          />
-        )}
-        orientation="horizontal"   // 👈 horizontal flip (can change to 'vertical')
-        portrait
-        enableTouch={true}         // 👈 user can touch to flip
-        duration={100}             // 👈 ultra-fast transition speed
-        curlMode="soft"            // 👈 smoother, natural curl
-      />
+    <View style={styles.screen}>
+
+      {/* 🔹 HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+          <Ionicons name="close" size={height * 0.032} color="#fff" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>{title}</Text>
+
+        {/* Right spacer */}
+        <View style={{ width: height * 0.032 }} />
+      </View>
+
+      {/* 🔹 FLIPBOOK + ZOOM */}
+      <View style={styles.flipArea}>
+        <PageFlipper
+  data={images}
+  pageSize={{ width, height: FLIP_HEIGHT }}
+  preRender={2}
+  renderPage={(uri) => {
+    const pageIndex = images.indexOf(uri); // 0-based
+    const pageNumber = pageIndex === -1 ? 0 : pageIndex + 1;
+
+    return (
+      <View style={styles.pageWrapper}>
+        <ImageZoom
+          cropWidth={width}
+          cropHeight={FLIP_HEIGHT}
+          imageWidth={width}
+          imageHeight={FLIP_HEIGHT}
+          enableCenterFocus={false}
+          minScale={1}
+          maxScale={4}
+          style={{ backgroundColor: "#fff" }}
+        >
+          <View style={{ flex: 1 }}>
+            <Image
+              source={{ uri }}
+              style={styles.page}
+              resizeMode="contain"
+            />
+
+            {/* 🔹 PAGE NUMBER */}
+            <View style={styles.pageNumberContainer}>
+              <Text style={styles.pageNumberText}>
+                {pageNumber} / {totalPages}
+              </Text>
+            </View>
+          </View>
+        </ImageZoom>
+      </View>
+    );
+  }}
+  portrait
+  orientation="horizontal"
+  enableTouch={true}
+  duration={180}
+  curlMode="soft"
+/>
+
+      </View>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ccc' },
-  pageImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+  screen: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  header: {
+    height: TOP_HEADER,
+    backgroundColor: "#000",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: width * 0.04,
+    borderBottomColor: "#222",
+    borderBottomWidth: 1,
+  },
+
+  iconBtn: {
+    padding: height * 0.004,
+  },
+
+  title: {
+    fontSize: height * 0.022,
+    fontWeight: "600",
+    color: "#fff",
+  },
+
+  flipArea: {
+    width: "100%",
+    height: FLIP_HEIGHT,
+    backgroundColor: "#fff",
+  },
+
+  pageWrapper: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  page: {
+    width: "100%",
+    height: "100%",
+  },
+
+  pageNumberContainer: {
+    position: "absolute",
+    bottom: 10,
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  pageNumberText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
