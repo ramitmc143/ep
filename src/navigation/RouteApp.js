@@ -32,7 +32,15 @@ import LoginScreen from '../components/LoginScreen';
 import RegistrationScreen from '../components/RegistrationScreen';
 import AcademicStack from '../screens/academics/AcademicStack';
 import FlipBookScreen from '../screens/academics/FlipBookScreen';
-import EbookView from '../screens/Ebook';
+// ✅ Redux / Firebase
+import { useDispatch, useSelector } from 'react-redux';
+import { setSelectedScreen } from '../redux/selectedScreenSlice/selectedScreenSlice';
+import { setLanguageStatus } from '../redux/language_id_status_slice/language_id_status_Slice';
+import messaging from '@react-native-firebase/messaging';
+import notifee from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCrashlytics, log } from '@react-native-firebase/crashlytics';
+import { navigationRef } from './NavigationService';
 
 // ✅ Notification Setup
 import PushNotificationSetup from '../push_notification/PushNotificationSetup';
@@ -55,7 +63,6 @@ const screenComponentMap = {
   14: CareerAndCoursesScreen,
   15: APPSCScreen,
   16: TGPSCScreen,
-  17:EbookView
 };
 
 const getComponentByName = (api_link, common_id) => {

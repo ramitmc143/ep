@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   InteractionManager,
+  SafeAreaView,
 } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,10 +28,6 @@ import Share from 'react-native-share';
 import {RefreshControl} from 'react-native-gesture-handler';
 import {fetchDataOfCategory} from '../redux/slices/dataSlice';
 import {useNavigation} from '@react-navigation/native';
-import {SafeAreaView} from 'react-native';
-// import BannerAdComponent from '../MobileAds/BannerAdComponent';
-import InterstitialAdComponent from '../MobileAds/InterstitialAdComponent';
-import DeviceInfo from 'react-native-device-info';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {getDeviceId} from '../deviceDetails/DeviceId';
 
@@ -42,34 +39,23 @@ const ReusableScreen = ({
   langId,
   shouldDispatch,
   params,
-  isAdVisible,
-  setIsAdVisible,
 }) => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingImage, setLoadingImage] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [shareImage, setShareImage] = useState(false);
   const [shareItemIndex, setShareItemIndex] = useState(null);
-  // const [bannerKey, setBannerKey] = useState(0); // To re-render BannerAdComponent
-
 
   const flatListRef = useRef(null);
-const [currentIndex, setCurrentIndex] = useState(0);
-const lastOffsetY = useRef(0);
-const lastScrollIndex = useRef(0); 
+  const lastScrollIndex = useRef(0);
 
-
-  //  const hasNotch = true
   const insets = useSafeAreaInsets();
-  const hasNotch = DeviceInfo.hasNotch();
-
-  // console.log('insets-', insets);
 
   let handleHasNotchStyle = 'noCutout';
-
   if (insets.top > 30) {
     handleHasNotchStyle = 'notch';
   } else if (insets.top > 10) {
@@ -77,29 +63,17 @@ const lastScrollIndex = useRef(0);
   }
 
   const marginBottomValue = (() => {
+    // Using the "no ad" margins you had earlier
     switch (handleHasNotchStyle) {
       case 'notch':
-        return verticalScale(isAdVisible ? 237 : 200);
+        return verticalScale(200);
       case 'holePunch':
-        return verticalScale(isAdVisible ? 190 : 160);
+        return verticalScale(160);
       case 'noCutout':
       default:
-        return verticalScale(isAdVisible ? 180 : 150);
+        return verticalScale(150);
     }
   })();
-
-  const [ADDetails, setADDetails] = useState({});
-  // console.log('ADDetails', ADDetails);
-
-  // const refreshBannerAd = () => {
-  //   setBannerKey(prev => prev + 1); // Triggers re-mount of BannerAdComponent
-  // };
-  // const [showAd, setShowAd] = useState(false);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [lastTriggeredAdIndex, setLastTriggeredAdIndex] = useState(null);
-
-  const itemGap = ADDetails?.FullAds?.itemsgap ?? 6;
-  // console.log('itemGap', itemGap); // fallback to 6 if undefined
 
   const readMore_text = readMoreTextLang[langId];
   const viewShotRefs = useRef([]);
@@ -111,15 +85,21 @@ const lastScrollIndex = useRef(0);
     }
     try {
       const response = await axios.post(apiLink, params);
-      console.log("response",response)
+      console.log('response', response);
+
       const resultData = response.data?.[responseKey] || [];
-      const ADDetails = response.data?.ADDetails;
       const device_id = getDeviceId();
+
       setData(resultData);
-      setADDetails(ADDetails);
+
       if (shouldDispatch) {
         dispatch(
-          fetchDataOfCategory({apiLink, langId, responseKey, device_id}),
+          fetchDataOfCategory({
+            apiLink,
+            langId,
+            responseKey,
+            device_id,
+          }),
         );
       }
     } catch (error) {
@@ -128,7 +108,7 @@ const lastScrollIndex = useRef(0);
       setLoading(false);
       setRefreshing(false);
     }
-  }, [apiLink, langId, responseKey]);
+  }, [apiLink, langId, responseKey, params, shouldDispatch, dispatch]);
 
   useEffect(() => {
     fetchData();
@@ -138,19 +118,6 @@ const lastScrollIndex = useRef(0);
     setRefreshing(true);
     fetchData();
   };
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     refreshBannerAd(); // Refresh every 60 seconds
-  //   }, 60000);
-
-  //   return () => clearInterval(interval); // Cleanup on unmount
-  // }, []);
-
-  // useEffect(() => {
-  //   if (ADDetails?.StickyAds?.Native_Ads) {
-  //     setBannerKey(prev => prev + 1); // Force remount when new ads arrive
-  //   }
-  // }, [ADDetails]);
 
   const handleShare = async (item, index) => {
     try {
@@ -158,17 +125,18 @@ const lastScrollIndex = useRef(0);
 
       setShareItemIndex(index);
       setShareImage(true);
+
       await new Promise(resolve => setTimeout(resolve, 300));
       await new Promise(requestAnimationFrame);
       await InteractionManager.runAfterInteractions();
 
       const viewShotRef = viewShotRefs.current[index];
       if (!viewShotRef) {
-        // console.warn('ViewShot ref not found');
         return;
       }
 
       const uri = await viewShotRef.capture();
+
       const message = `${item[dataKeyMap.title]}\n\n${
         item[dataKeyMap.longDesc]
       }\n\n- via ఈనాడు ప్రతిభ app\n${EenaduAppShareLinkUrl}`;
@@ -190,75 +158,31 @@ const lastScrollIndex = useRef(0);
     }
   };
 
-  const lastTriggeredAdIndexRef = useRef(null);
-
-
-  const onViewableItemsChanged = useCallback(
-    ({viewableItems}) => {
-      if (viewableItems.length > 0) {
-        const index = viewableItems[0].index;
-
-        if (
-          index !== null &&
-          index !== undefined &&
-          index !== 0 &&
-          itemGap > 0 &&
-          index % itemGap === 0 &&
-          index !== lastTriggeredAdIndexRef.current
-        ) {
-          setScrollEnabled(false);
-          // setShowAd(true);
-          lastTriggeredAdIndexRef.current = index;
-          setLastTriggeredAdIndex(index); // update state as well if needed
-        }
-      }
-    },
-    [itemGap],
-  );
-
-  
-
-  const onMomentumScrollEnd = (event) => {
+  const onMomentumScrollEnd = event => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const itemHeight = hp('100%');
     const index = Math.round(offsetY / itemHeight);
     const lastIndex = data.length - 1;
-  
+
     // Determine scroll direction
     const direction = index > lastScrollIndex.current ? 'down' : 'up';
-  
-    // Only loop to first if at last item AND direction is up (i.e., user tries to scroll past last item upwards)
+
+    // Loop from last to first (based on your original logic)
     if (index >= lastIndex && direction === 'up') {
       setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: 0, animated: false });
-        setCurrentIndex(0);
+        flatListRef.current?.scrollToIndex({index: 0, animated: false});
         lastScrollIndex.current = 0;
       }, 10);
-    } 
-    // Only loop to last if at first item AND direction is down (optional: for reverse loop)
+    }
+    // Loop from first to last
     else if (index <= 0 && direction === 'down') {
       setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: lastIndex, animated: false });
-        setCurrentIndex(lastIndex);
+        flatListRef.current?.scrollToIndex({index: lastIndex, animated: false});
         lastScrollIndex.current = lastIndex;
       }, 10);
-    } 
-    else {
-      setCurrentIndex(index);
+    } else {
       lastScrollIndex.current = index;
     }
-  
-    lastOffsetY.current = offsetY;
-  };
-  
-
-  const viewabilityConfig = {
-    itemVisiblePercentThreshold: 80,
-  };
-
-  const handleAdClosed = () => {
-    // setShowAd(false);
-    setScrollEnabled(true);
   };
 
   const renderItem = useCallback(
@@ -344,13 +268,13 @@ const lastScrollIndex = useRef(0);
             </ViewShot>
           </ScrollView>
 
-          {/* ✅ Fixed Footer at bottom of card */}
-
+          {/* Fixed Footer at bottom of card */}
           <View
             style={[
               styles.footerRowFixed,
-              {marginBottom:marginBottomValue}
-
+              {
+                marginBottom: marginBottomValue,
+              },
             ]}>
             <View style={styles.footerButton}>
               <Icon
@@ -392,7 +316,7 @@ const lastScrollIndex = useRef(0);
         </View>
       </View>
     ),
-    [readMore_text, loadingImage, shareImage, shareItemIndex, isAdVisible],
+    [readMore_text, loadingImage, shareImage, shareItemIndex, navigation, dataKeyMap],
   );
 
   if (loading) {
@@ -402,6 +326,7 @@ const lastScrollIndex = useRef(0);
       </View>
     );
   }
+
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -415,13 +340,13 @@ const lastScrollIndex = useRef(0);
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={true}
         showsVerticalScrollIndicator={false}
         pagingEnabled
         snapToInterval={hp('100%')}
         decelerationRate="normal"
         bounces={false}
-        disableIntervalMomentum={true} // ensures single snap
+        disableIntervalMomentum={true}
         snapToAlignment="start"
         getItemLayout={(_, index) => ({
           length: hp('100%'),
@@ -430,34 +355,8 @@ const lastScrollIndex = useRef(0);
         })}
         initialNumToRender={5}
         removeClippedSubviews
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
         onMomentumScrollEnd={onMomentumScrollEnd}
-        
       />
-  {/*  
-      {showAd && (
-        <InterstitialAdComponent
-          ADDetails={ADDetails || {}}
-          OnHandleCancel_ad={handleAdClosed}
-        />
-      )}
-         
-          <View style={styles.bannerAds}>
-  {isAdVisible ? (
-    <BannerAdComponent
-      key={bannerKey}
-      ADDetails={ADDetails}
-      onAdLoaded={() => setIsAdVisible(true)}
-      onAdFailedToLoad={() => setIsAdVisible(false)}
-    />
-  ) : (
-    <View style={styles.adPlaceholder} />
-  )}
-</View>  
- */}
-
-
     </SafeAreaView>
   );
 };
@@ -493,7 +392,6 @@ const styles = ScaledSheet.create({
     marginBottom: verticalScale(10),
     paddingHorizontal: scale(15),
   },
-
   imageContainer: {
     height: hp('34%'),
     marginHorizontal: scale(10),
@@ -508,11 +406,10 @@ const styles = ScaledSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'stretch', // 'cover' looks better for images usually
+    resizeMode: 'stretch',
   },
   titleDescriptionWrapper: {
     flex: 1,
-    // paddingHorizontal: scale(15), // moved to fixedContainer to avoid double padding
     marginTop: verticalScale(10),
     marginBottom: verticalScale(5),
   },
@@ -534,7 +431,6 @@ const styles = ScaledSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    // marginBottom:200
   },
   footerButton: {
     flexDirection: 'row',
@@ -548,32 +444,14 @@ const styles = ScaledSheet.create({
     marginHorizontal: moderateScale(5),
     justifyContent: 'center',
   },
-
   footerButtonText: {
     fontSize: moderateScale(13),
     color: '#007BFF',
     fontWeight: '600',
   },
-
-  bannerAds: {
-    position: 'absolute',
-    bottom: 2,
-    left: 0,
-    right: 0,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   hiddenImage: {
     opacity: 0,
   },
 });
 
 export default ReusableScreen;
-
-
-
-
-
-
