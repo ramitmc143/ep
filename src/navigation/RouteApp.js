@@ -48,6 +48,13 @@ import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PushNotificationSetup from '../push_notification/PushNotificationSetup';
 import notifee from '@notifee/react-native';
+import LoginScreen from '../components/LoginScreen';
+import RegistrationScreen from '../components/RegistrationScreen';
+import AcademicScreen from '../screens/academics/AcademicScreen';
+import SubjectBooksScreen from '../screens/academics/SubjectBooksScreen';
+import CategoryDetailScreen from '../screens/academics/CategoryDetailsScreen';
+import PapersScreen from '../screens/academics/PaperScreen';
+import FlipBookScreen from '../screens/academics/FlipBookScreen';
 import EbookView from '../screens/Ebook';
 
 const RootStack = createNativeStackNavigator();
@@ -76,7 +83,7 @@ const CustomDrawerContent = props => {
                     message:
                       'Check out this amazing app: https://pratibha.eenadu.net/',
                     title: 'Share App',
-                  }).catch(err => console.log('Error sharing app:', err));
+                  }).catch(err => console.log('Error sharing app:', err));                     
                 }}
                 style={{
                   flexDirection: 'row',
@@ -116,6 +123,7 @@ const screenComponentMap = {
   2: EducationalInformation,
   3: LatestNotification,
   4: DSC,
+  6: AcademicScreen,
   8: TermsAndConditionsScreen,
   9: TermsOfUseScreen,
   10: PrivacyPolicyScreen,
@@ -556,7 +564,7 @@ const RouteApp = () => {
       <RootStack.Navigator
         screenOptions={{headerShown: false}}
         initialRouteName={
-          initialNotificationUrl
+          initialNotificationUrl   
             ? 'CustomWebView'
             : isFirstLaunch
             ? 'ConsentScreen'
@@ -584,11 +592,38 @@ const RouteApp = () => {
           component={BellNotification}
           options={{headerShown: false}}
         />
+          <RootStack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{headerShown: false}}
+        />
+            <RootStack.Screen
+          name="Register"
+          component={RegistrationScreen}
+          options={{headerShown: false}}
+        />
         <RootStack.Screen
           name="CustomWebView"
           component={CustomWebView}
           options={{headerShown: false}}
           initialParams={{url: initialNotificationUrl}} // pass url as param
+        />
+   
+        <RootStack.Screen
+          name="SubjectBooksScreen"
+          component={SubjectBooksScreen}
+        />
+        <RootStack.Screen
+          name="CategoryDetailScreen"
+          component={CategoryDetailScreen}
+        />
+          <RootStack.Screen
+          name="PapersScreen"
+          component={PapersScreen}
+        />
+           <RootStack.Screen
+          name="FlipBookScreen"
+          component={FlipBookScreen}
         />
       </RootStack.Navigator>
     </NavigationContainer>

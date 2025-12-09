@@ -1,5 +1,5 @@
 // Way2NewsMixedUIFlipRefinedFixedSwapped_Inertia_Responsive.js
-import React, {useState, memo} from 'react';
+import React, {useState, useRef, memo} from 'react';
 import {
   View,
   Text,
@@ -20,8 +20,9 @@ import Animated, {
   interpolate,
   Extrapolate,
   runOnJS,
+  withDelay,
+  Easing,
 } from 'react-native-reanimated';
-import {Easing, withDelay} from 'react-native-reanimated';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -58,7 +59,6 @@ const data = [
 export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
   const [index, setIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
-
   const [snap, setSnap] = useState({
     active: false,
     dir: null,
@@ -71,7 +71,10 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
   const direction = useSharedValue(null);
   const textFade = useSharedValue(1);
 
-  // Use snap items during animation to prevent re-render, fallback to index-based items when inactive
+  // Locks
+  const lockedPrevRef = useRef(null);
+  const lockedBottomRef = useRef(null);
+
   const currentItem = snap.active && snap.current ? snap.current : data[index];
   const upcomingItem = snap.active && snap.next ? snap.next : data[nextIndex];
   const previousItem =
@@ -92,14 +95,12 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
 
       setNextIndex(next);
 
-      // Update snap items to new values to prevent re-render during reset
       setSnap(prevSnap => ({
         ...prevSnap,
         current: data[newIndex],
         next: data[next],
         prev: data[(newIndex - 1 + data.length) % data.length],
       }));
-
       return newIndex;
     });
   };
@@ -109,6 +110,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
       if (!direction.value) {
         if (e.translationY < -20) direction.value = 'up';
         else if (e.translationY > 20) direction.value = 'down';
+
         if (direction.value) {
           runOnJS(setSnap)({
             active: true,
@@ -117,6 +119,15 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
             next: data[(index + 1) % data.length],
             prev: data[(index - 1 + data.length) % data.length],
           });
+
+          if (direction.value === 'down') {
+            lockedPrevRef.current =
+              data[(index - 1 + data.length) % data.length];
+            lockedBottomRef.current = data[index];
+          } else {
+            lockedPrevRef.current = null;
+            lockedBottomRef.current = null;
+          }
         }
       }
 
@@ -159,16 +170,21 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
             {duration: 400, easing: Easing.out(Easing.cubic)},
             finished => {
               if (finished) {
-                runOnJS(updateIndex)(dir);
                 progress.value = withDelay(
-                  100,
+                  60,
                   withTiming(0, {duration: 0}, () => {
-                    direction.value = null;
-                    runOnJS(setSnap)(prev => ({
-                      ...prev,
-                      active: false,
-                      dir: null,
-                    }));
+                    runOnJS(updateIndex)(dir);
+
+                    // ✅ FIX: delay clearing direction/snap to stop flicker
+                    runOnJS(() => {
+                      setTimeout(() => {
+                        direction.value = null;
+                        setSnap(prev => ({...prev, active: false, dir: null}));
+                        lockedPrevRef.current = null;
+                        lockedBottomRef.current = null;
+                      }, 120);
+                    });
+
                     textFade.value = withTiming(1, {
                       duration: 400,
                       easing: Easing.out(Easing.cubic),
@@ -187,11 +203,9 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
             },
             () => {
               direction.value = null;
-              runOnJS(setSnap)(prev => ({
-                ...prev,
-                active: false,
-                dir: null,
-              }));
+              runOnJS(setSnap)(prev => ({...prev, active: false, dir: null}));
+              lockedPrevRef.current = null;
+              lockedBottomRef.current = null;
             },
           );
         }
@@ -201,6 +215,8 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
           easing: Easing.out(Easing.cubic),
         });
         direction.value = null;
+        lockedPrevRef.current = null;
+        lockedBottomRef.current = null;
       }
     });
 
@@ -257,19 +273,20 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
     };
   });
 
-  const textAnimated = useAnimatedStyle(() => ({
-    opacity: textFade.value,
-  }));
+  const textAnimated = useAnimatedStyle(() => ({opacity: textFade.value}));
 
   const bgTopCurrentStyle = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 1 : 0,
   }));
+
   const bgTopUpcomingStyle = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 0 : 1,
   }));
+
   const bgBottomCurrentStyle = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 0 : 1,
   }));
+
   const bgBottomUpcomingStyle = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 1 : 0,
   }));
@@ -305,6 +322,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
   const topFrontImageCurrentOpacity = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 0 : 1,
   }));
+
   const topFrontImageUpcomingOpacity = useAnimatedStyle(() => ({
     opacity: direction.value === 'up' ? 1 : 0,
   }));
@@ -323,7 +341,6 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
           <StatusBar hidden />
 
           {/* Backgrounds */}
-          {/* Backgrounds */}
           <Animated.View
             style={[styles.half, styles.topHalf, bgTopCurrentStyle]}>
             <MixedCard
@@ -331,6 +348,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
               half="top"
             />
           </Animated.View>
+
           <Animated.View
             style={[styles.half, styles.topHalf, bgTopUpcomingStyle]}>
             <MixedCard
@@ -338,20 +356,26 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
               half="top"
             />
           </Animated.View>
+
           <Animated.View
             style={[styles.half, styles.bottomHalf, bgBottomCurrentStyle]}>
             <MixedCard
-              item={snap.active && snap.current ? snap.current : currentItem}
+              item={
+                lockedBottomRef.current
+                  ? lockedBottomRef.current
+                  : snap.active && snap.current
+                  ? snap.current
+                  : currentItem
+              }
               half="bottom"
-              // animatedStyle={textAnimated}
             />
           </Animated.View>
+
           <Animated.View
             style={[styles.half, styles.bottomHalf, bgBottomUpcomingStyle]}>
             <MixedCard
               item={snap.active && snap.next ? snap.next : upcomingItem}
               half="bottom"
-              // animatedStyle={textAnimated}
             />
           </Animated.View>
 
@@ -364,6 +388,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
                 half="top"
               />
             </Animated.View>
+
             <Animated.View
               style={[styles.absoluteFill, topFrontImageCurrentOpacity]}>
               <MixedCard
@@ -371,6 +396,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
                 half="top"
               />
             </Animated.View>
+
             <Animated.View
               style={[
                 styles.flipBackContent,
@@ -378,9 +404,16 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
                 topBackContentOpacity,
               ]}>
               <MixedCard
-                item={snap.active && snap.prev ? snap.prev : previousItem}
+                item={
+                  lockedPrevRef.current
+                    ? lockedPrevRef.current
+                    : direction.value === 'down'
+                    ? previousItem
+                    : snap.active && snap.prev
+                    ? snap.prev
+                    : previousItem
+                }
                 half="bottom"
-                // animatedStyle={textAnimated}
               />
             </Animated.View>
           </Animated.View>
@@ -391,14 +424,14 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped() {
               <MixedCard
                 item={snap.active && snap.current ? snap.current : currentItem}
                 half="bottom"
-                // animatedStyle={textAnimated}
               />
             </Animated.View>
+
             <Animated.View
               style={[
                 styles.flipBackContent,
                 styles.flipBackFace,
-                bottomBackContentOpacity, 
+                bottomBackContentOpacity,
               ]}>
               <MixedCard
                 item={snap.active && snap.next ? snap.next : upcomingItem}
