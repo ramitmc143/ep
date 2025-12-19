@@ -17,8 +17,6 @@ import SpInAppUpdates, {
 } from 'sp-react-native-in-app-updates';
 import mobileAds from 'react-native-google-mobile-ads';
 import { initDeviceId } from './src/deviceDetails/DeviceId';
-import FullScreenBook from './src/screens/FullScreenBook';
-import PageFlipView from './src/TestDY/PageFlipView';
 
 
 const AppContent = () => {

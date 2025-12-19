@@ -1,40 +1,12 @@
-// // /**
-// //  * @format
-// //  */
-
-// // import {AppRegistry} from 'react-native';
-// // import App from './App';
-// // import {name as appName} from './app.json';
-
-// // AppRegistry.registerComponent(appName, () => App);
-// // import 'react-native-gesture-handler';
-// import 'react-native-gesture-handler';
-// import 'react-native-reanimated';
-
-
-// import {AppRegistry} from 'react-native';
-// import App from './App';
-// import {name as appName} from './app.json';
-// // import {enableScreens} from 'react-native-screens';
-
-// // enableScreens();
-// AppRegistry.registerComponent(appName, () => App);
-
-
-
-
-/**
- * @format
- */
 import 'react-native-gesture-handler'; // ✅ keep this early as well
 import 'react-native-reanimated'; // ✅ must be FIRST (before any React import)
 import {AppRegistry, LogBox, BackHandler} from 'react-native';
 import App from './App';
 import {name as appName} from './app.json';
-import crashlytics from '@react-native-firebase/crashlytics';
-import notifee, {EventType} from '@notifee/react-native';
+// import crashlytics from '@react-native-firebase/crashlytics';
+// import notifee, {EventType} from '@notifee/react-native';
 import './src/push_notification/NtifeeBackgroundHandler';
-import {navigationRef} from '../eenaduPratibha/src/navigation/NavigationService';
+// import {navigationRef} from '../eenaduPratibha/src/navigation/NavigationService';
 
 // let initialNotification = null;
 

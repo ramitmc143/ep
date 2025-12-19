@@ -137,12 +137,24 @@ const BottomTabScreens = React.memo(({ allTabItems, drawerMenuItems }) => {
   const dispatch = useDispatch();
   const langId = useSelector(state => (state.language.data === 'english' ? 1 : 2));
   const drawerNames = drawerMenuItems.map(d => d.short_name);
+const BASE_TABBAR_STYLE = {
+  position: 'absolute',    // make it overlay
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: hp('8%'),
+  borderTopWidth: 0,
+  elevation: 0,
+  backgroundColor: 'rgba(0, 174, 239, 0.95)', // keep existing color or adjust
+  zIndex: 1000,
+};
 
   return (
     <BottomTab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { borderTopWidth: 0, elevation: 0 },
+           tabBarStyle: BASE_TABBAR_STYLE,
+        // tabBarStyle: { borderTopWidth: 0, elevation: 0 },
         tabBarItemStyle: { width: wp('22%') },
         tabBarActiveTintColor: '#007bff',
         tabBarInactiveTintColor: '#555',
@@ -211,7 +223,10 @@ const DrawerNavigator = React.memo(({ allTabItems, drawerMenuItems }) => {
   return (
     <Drawer.Navigator
       drawerContent={props => <CustomDrawerContent {...props} drawerMenuItems={drawerMenuItems} />}
-      screenOptions={{ header: () => <Header tabId={tabId} />, drawerStyle: { backgroundColor: '#fff' } }}
+  screenOptions={{
+    headerShown: false,   // <-- was header: () => <Header />
+    drawerStyle: { backgroundColor: '#fff' },
+  }}
       screenListeners={({ navigation }) => ({
         drawerItemPress: e => {
           const name = e.target?.split('-')[0];
@@ -319,10 +334,17 @@ const RouteApp = () => {
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {isFirstLaunch && <RootStack.Screen name="ConsentScreen" component={ConsentScreen} />}
 
-        <RootStack.Screen
-          name="MainTabs"
-          children={() => <DrawerNavigator allTabItems={allTabItems} drawerMenuItems={drawerMenuItems} />}
-        />
+    <RootStack.Screen
+  name="MainTabs"
+  children={() => (
+    <DrawerNavigator
+      allTabItems={allTabItems}
+      drawerMenuItems={drawerMenuItems}
+    />
+  )}
+  options={{ headerShown: false }}   // <--- add this line
+/>
+
 
         <RootStack.Screen name="PdfViewer" component={PdfViewer} />
         <RootStack.Screen name="BellNotification" component={BellNotification} />

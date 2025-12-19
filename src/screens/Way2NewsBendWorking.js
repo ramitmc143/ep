@@ -1,5 +1,5 @@
-// Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll.js
-import React, { useState, memo } from 'react';
+// Way2NewsMixedUIFlipInertia.js
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,20 +17,32 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withDelay,
+  withDecay,
   interpolate,
   Extrapolate,
   runOnJS,
-  withDelay,
+  Easing,
 } from 'react-native-reanimated';
-import { Easing } from 'react-native-reanimated';
-import {
-  widthPercentageToDP as wp,
-  heightPercentageToDP as hp,
-} from 'react-native-responsive-screen';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
-const { height, width } = Dimensions.get('window');
-const HALF = height / 2;
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("screen");
+const HALF = Math.round(SCREEN_H / 2); // round for perfect pixel alignment
+/**
+ * Map pan translation Y to "flip progress" in [-1,1].
+ *  0 -> rest,  0.5 -> crossed mid (up),  1 -> full (up)
+ *  0 -> rest, -0.5 -> crossed mid (down), -1 -> full (down)
+ */
+const translationYToProgress = (ty) => {
+  'worklet';
+  // HALF translation = 1 unit of progress
+  return ty / -HALF; // negative ty (drag up) -> positive progress
+};
+
+// Clamp helper
+const clamp = (v, min, max) => {
+  'worklet';
+  return Math.max(min, Math.min(v, max));
+};
 
 const data = [
   {
@@ -56,7 +68,7 @@ const data = [
   },
 ];
 
-export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
+export default function Way2NewsMixedUIFlipInertia() {
   const [index, setIndex] = useState(0);
   const [nextIndex, setNextIndex] = useState(1);
   const [snap, setSnap] = useState({
@@ -67,20 +79,16 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
     prev: null,
   });
 
-  const progress = useSharedValue(0);
-  const direction = useSharedValue(null);
+  const progress = useSharedValue(0);        // -1..1 (flip progress)
+  const direction = useSharedValue(null);    // 'up' | 'down' | null
   const textFade = useSharedValue(1);
-  const resetInProgress = useSharedValue(false); // FIX: prevent blinking reset overlap
 
-  const currentItem = snap.active && snap.current ? snap.current : data[index];
-  const upcomingItem = snap.active && snap.next ? snap.next : data[nextIndex];
-  const previousItem =
-    snap.active && snap.prev
-      ? snap.prev
-      : data[(index - 1 + data.length) % data.length];
+  const currentItem = data[index];
+  const upcomingItem = data[nextIndex];
+  const previousItem = data[(index - 1 + data.length) % data.length];
 
   const updateIndex = (dir) => {
-    setIndex((prev) => {
+    setIndex(prev => {
       let newIndex;
       if (dir === 'up') newIndex = (prev + 1) % data.length;
       else newIndex = (prev - 1 + data.length) % data.length;
@@ -91,21 +99,43 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
           : (newIndex - 1 + data.length) % data.length;
 
       setNextIndex(next);
-
-      setSnap((prevSnap) => ({
-        ...prevSnap,
-        current: data[newIndex],
-        next: data[next],
-        prev: data[(newIndex - 1 + data.length) % data.length],
-      }));
-
       return newIndex;
     });
   };
 
+  const finishFlipAndCommit = (dir) => {
+    'worklet';
+    textFade.value = withTiming(0, { duration: 120 });
+    const end = dir === 'up' ? 1 : -1;
+
+    progress.value = withTiming(
+      end,
+      { duration: 350, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished) {
+          runOnJS(updateIndex)(dir);
+          progress.value = withDelay(
+            80,
+            withTiming(0, { duration: 0 }, () => {
+              direction.value = null;
+              runOnJS(setSnap)(prev => ({ ...prev, active: false, dir: null }));
+              textFade.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
+            }),
+          );
+        }
+      }
+    );
+  };
+
+  const cancelFlip = () => {
+    'worklet';
+    progress.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) });
+    direction.value = null;
+  };
+
   const pan = Gesture.Pan()
     .onUpdate((e) => {
-      if (!direction.value && !resetInProgress.value) {
+      if (!direction.value) {
         if (e.translationY < -20) direction.value = 'up';
         else if (e.translationY > 20) direction.value = 'down';
         if (direction.value) {
@@ -118,146 +148,153 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
           });
         }
       }
-
-      if (direction.value === 'up') {
-        progress.value = interpolate(
-          e.translationY,
-          [0, -HALF],
-          [0, 1],
-          Extrapolate.CLAMP
-        );
-      } else if (direction.value === 'down') {
-        progress.value = interpolate(
-          e.translationY,
-          [0, HALF],
-          [0, -1],
-          Extrapolate.CLAMP
-        );
-      }
+      // live map translation to progress
+      const p = translationYToProgress(e.translationY);
+      // Clamp lightly beyond bounds to allow tiny elastic look; we’ll clamp strictly onEnd
+      progress.value = clamp(p, -1.05, 1.05);
     })
     .onEnd((e) => {
-      if (!direction.value) return;
+      if (direction.value !== 'up' && direction.value !== 'down') {
+        cancelFlip();
+        return;
+      }
 
-      const dir = direction.value;
-      const velocity = e.velocityY;
-      const threshold = 0.5;
+      // Convert pixel velocity to progress velocity (units per second)
+      const vp = translationYToProgress(e.velocityY);
 
-      const momentum =
-        dir === 'up'
-          ? progress.value + Math.min(Math.abs(velocity) / 2000, 0.3)
-          : progress.value - Math.min(Math.abs(velocity) / 2000, 0.3);
+      // If the gesture already crossed the halfway OR velocity is strong toward it,
+      // we let a decay take it toward the appropriate end, then we "finishFlip".
+      const dir = direction.value; // 'up' | 'down'
+      const halfway = dir === 'up' ? 0.5 : -0.5;
 
-      const shouldFlip =
-        (dir === 'up' && momentum > threshold) ||
-        (dir === 'down' && momentum < -threshold);
+      const crossedHalf =
+        (dir === 'up' && progress.value >= halfway) ||
+        (dir === 'down' && progress.value <= halfway);
 
-      if (shouldFlip) {
-        resetInProgress.value = true; // FIX: lock updates during reset
-        if (dir === 'up') textFade.value = withTiming(0, { duration: 150 });
+      // Tuning numbers:
+      const STRONG_FLICK = 1.1; // progress units / sec (roughly ~HALF screen per 300ms)
+      const velocityHelps =
+        (dir === 'up' && vp > STRONG_FLICK) ||
+        (dir === 'down' && vp < -STRONG_FLICK);
 
-        progress.value = withTiming(
-          dir === 'up' ? 1 : -1,
-          { duration: 500, easing: Easing.out(Easing.cubic) },
-          (finished) => {
-            if (finished) {
-              runOnJS(updateIndex)(dir);
-              // FIX: delay reset slightly to allow frame to commit
-              progress.value = withDelay(
-                150,
-                withTiming(0, { duration: 0 }, () => {
-                  direction.value = null;
-                  resetInProgress.value = false; // FIX
-                  runOnJS(setSnap)((prev) => ({
-                    ...prev,
-                    active: false,
-                    dir: null,
-                  }));
-                  textFade.value = withTiming(1, {
-                    duration: 400,
-                    easing: Easing.out(Easing.cubic),
-                  });
-                })
-              );
+      if (crossedHalf || velocityHelps) {
+        // Let decay push further in the same direction, but clamp to the end
+        progress.value = withDecay({
+          velocity: vp,
+          clamp: dir === 'up' ? [0.5, 1.15] : [-1.15, -0.5],
+          rubberBandEffect: false,
+        });
+
+        // After a short delay, force-complete to ±1 so we can commit index cleanly
+        // (decay does not have "onComplete" — we nudge into a timing end)
+        progress.value = withDelay(
+          140,
+          withTiming(
+            dir === 'up' ? 1 : -1,
+            { duration: 280, easing: Easing.out(Easing.cubic) },
+            (finished) => {
+              if (finished) {
+                runOnJS(updateIndex)(dir);
+                progress.value = withDelay(
+                  80,
+                  withTiming(0, { duration: 0 }, () => {
+                    direction.value = null;
+                    runOnJS(setSnap)(prev => ({ ...prev, active: false, dir: null }));
+                    textFade.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
+                  }),
+                );
+              }
             }
-          }
+          )
         );
       } else {
-        progress.value = withTiming(
-          0,
-          {
-            duration: 300 + Math.abs(velocity) / 10,
-            easing: Easing.out(Easing.quad),
-          },
-          () => {
-            direction.value = null;
-            runOnJS(setSnap)((prev) => ({
-              ...prev,
-              active: false,
-              dir: null,
-            }));
-          }
-        );
+        // Didn’t cross half and velocity not enough → go back, but with a bit of inertial feel
+        // Small decay then snap back
+        progress.value = withDecay({
+          velocity: vp * 0.5,
+          clamp: [-0.25, 0.25],
+          rubberBandEffect: false,
+        });
+        progress.value = withDelay(120, withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }));
+        direction.value = null;
       }
     });
 
+  // ---- TOP HALF (mirrored logic) ----
   const topAnimated = useAnimatedStyle(() => {
     let rotateX = 0;
+
     if (direction.value === 'up') {
-      rotateX = interpolate(progress.value, [0.5, 1], [-90, 0]);
+      rotateX = interpolate(progress.value, [0.5, 1], [-90, 0], Extrapolate.CLAMP);
     } else if (direction.value === 'down') {
-      rotateX = interpolate(progress.value, [0, -1], [0, -180]);
+      rotateX = interpolate(progress.value, [0, -1], [0, -180], Extrapolate.CLAMP);
     }
+
     return {
       transform: [
-        { perspective: 70000 },
+        { perspective: 30000 },
         { translateY: HALF / 2 },
         { rotateX: `${rotateX}deg` },
         { translateY: -HALF / 2 },
       ],
       backfaceVisibility: 'visible',
+      zIndex: 5,
     };
   });
 
+  // ---- BOTTOM HALF ----
   const bottomAnimated = useAnimatedStyle(() => {
     let rotateX = 0;
+
     if (direction.value === 'up') {
-      rotateX = interpolate(progress.value, [0, 0.5], [0, 90]);
+      rotateX = interpolate(progress.value, [0, 0.5], [0, 90], Extrapolate.CLAMP);
     } else if (direction.value === 'down') {
-      rotateX = 0;
+      rotateX = 0; // fixed while top rotates down
     }
+
     return {
       transform: [
-        { perspective: 10000 },
+        { perspective: 1000 },
         { translateY: -HALF / 2 },
         { rotateX: `${rotateX}deg` },
         { translateY: HALF / 2 },
       ],
       backfaceVisibility: 'visible',
+      zIndex: 4,
     };
   });
 
-  const textAnimated = useAnimatedStyle(() => ({
-    opacity: textFade.value,
-  }));
+  const textAnimated = useAnimatedStyle(() => ({ opacity: textFade.value }));
 
-  // ✅ FIX: Keep bottom half visible while rotation completes
-  const bottomBackContentOpacity = useAnimatedStyle(() => {
-    if (direction.value === 'up') {
-      return {
-        opacity: interpolate(progress.value, [0.3, 1], [0.2, 1]),
-      };
-    }
-    return { opacity: 0 };
-  });
+  // Background lock layers
+  const bgTopCurrentStyle = useAnimatedStyle(() => ({ opacity: direction.value === 'up' ? 1 : 0 }));
+  const bgTopUpcomingStyle = useAnimatedStyle(() => ({ opacity: direction.value === 'up' ? 0 : 1 }));
+  const bgBottomCurrentStyle = useAnimatedStyle(() => ({ opacity: direction.value === 'down' ? 1 : 0 }));
+  const bgBottomUpcomingStyle = useAnimatedStyle(() => ({ opacity: direction.value === 'down' ? 0 : 1 }));
 
   const topBackContentOpacity = useAnimatedStyle(() => {
     if (direction.value === 'down') {
-      return {
-        opacity: interpolate(progress.value, [-0.3, -1], [0.2, 1]),
-      };
+      return { opacity: interpolate(progress.value, [-0.5, -1], [0, 1], Extrapolate.CLAMP) };
     }
     return { opacity: 0 };
   });
+
+  const bottomBackContentOpacity = useAnimatedStyle(() => {
+    if (direction.value === 'up') {
+      return { opacity: interpolate(progress.value, [0.5, 1], [0, 1], Extrapolate.CLAMP) };
+    }
+    return { opacity: 0 };
+  });
+
+  const bottomFrontContentOpacity = useAnimatedStyle(() => {
+    if (direction.value === 'up') {
+      return { opacity: interpolate(progress.value, [0, 0.5], [1, 0], Extrapolate.CLAMP) };
+    }
+    return { opacity: 1 };
+  });
+
+  const topFrontImageCurrentOpacity = useAnimatedStyle(() => ({ opacity: direction.value === 'up' ? 0 : 1 }));
+  const topFrontImageUpcomingOpacity = useAnimatedStyle(() => ({ opacity: direction.value === 'up' ? 1 : 0 }));
 
   if (!currentItem || !upcomingItem) {
     return (
@@ -272,30 +309,62 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
       <GestureDetector gesture={pan}>
         <View style={styles.container}>
           <StatusBar hidden />
-          {/* Top Flip */}
-          <Animated.View style={[styles.half, styles.topHalf, topAnimated]}>
+
+          {/* BACK TOP HALF */}
+          <Animated.View style={[styles.half, styles.topHalf, bgTopCurrentStyle]}>
             <MixedCard item={currentItem} half="top" />
-            <Animated.View
-              style={[
-                styles.flipBackContent,
-                styles.flipBackFace,
-                topBackContentOpacity,
-              ]}
-            >
-              <MixedCard item={previousItem} half="bottom" />
+          </Animated.View>
+          <Animated.View style={[styles.half, styles.topHalf, bgTopUpcomingStyle]}>
+            <MixedCard
+              item={
+                snap.active
+                  ? snap.dir === 'down'
+                    ? snap.prev
+                    : snap.next
+                  : upcomingItem
+              }
+              half="top"
+            />
+          </Animated.View>
+
+          {/* BACK BOTTOM HALF */}
+          <Animated.View style={[styles.half, styles.bottomHalf, bgBottomCurrentStyle]}>
+            <MixedCard item={currentItem} half="bottom" animatedStyle={textAnimated} />
+          </Animated.View>
+          <Animated.View style={[styles.half, styles.bottomHalf, bgBottomUpcomingStyle]}>
+            <MixedCard item={upcomingItem} half="bottom" animatedStyle={textAnimated} />
+          </Animated.View>
+
+          {/* FRONT (animated halves) */}
+          <Animated.View style={[styles.half, styles.topHalf, topAnimated]}>
+            {/* upcoming image during UP flip */}
+            <Animated.View style={[styles.absoluteFill, topFrontImageUpcomingOpacity]}>
+              <MixedCard
+                item={snap.active && snap.dir === 'up' ? snap.next : upcomingItem}
+                half="top"
+              />
+            </Animated.View>
+            {/* current image otherwise */}
+            <Animated.View style={[styles.absoluteFill, topFrontImageCurrentOpacity]}>
+              <MixedCard item={currentItem} half="top" />
+            </Animated.View>
+            {/* backface: previous text (down flow) */}
+            <Animated.View style={[styles.flipBackContent, styles.flipBackFace, topBackContentOpacity]}>
+              <MixedCard
+                item={snap.active && snap.dir === 'down' ? snap.prev : previousItem}
+                half="bottom"
+                animatedStyle={textAnimated}
+              />
             </Animated.View>
           </Animated.View>
 
-          {/* Bottom Flip */}
           <Animated.View style={[styles.half, styles.bottomHalf, bottomAnimated]}>
-            <MixedCard item={currentItem} half="bottom" />
-            <Animated.View
-              style={[
-                styles.flipBackContent,
-                styles.flipBackFace,
-                bottomBackContentOpacity,
-              ]}
-            >
+            {/* front: current text */}
+            <Animated.View style={bottomFrontContentOpacity}>
+              <MixedCard item={currentItem} half="bottom" animatedStyle={textAnimated} />
+            </Animated.View>
+            {/* back: next image */}
+            <Animated.View style={[styles.flipBackContent, styles.flipBackFace, bottomBackContentOpacity]}>
               <MixedCard item={upcomingItem} half="top" />
             </Animated.View>
           </Animated.View>
@@ -305,7 +374,7 @@ export default function Way2NewsMixedUIFlipRefinedFixedSwapped_SmoothScroll() {
   );
 }
 
-const MixedCard = memo(function MixedCard({ item, half, animatedStyle }) {
+function MixedCard({ item, half, animatedStyle }) {
   if (!item) return null;
   return (
     <View
@@ -315,10 +384,9 @@ const MixedCard = memo(function MixedCard({ item, half, animatedStyle }) {
           backgroundColor: half === 'top' ? '#000' : '#fff',
           justifyContent: half === 'top' ? 'flex-end' : 'flex-start',
         },
-      ]}
-    >
+      ]}>
       {half === 'top' ? (
-        <Image source={{ uri: item.image }} style={styles.image} />
+        item.image ? <Image source={{ uri: item.image }} style={styles.image} /> : null
       ) : (
         <Animated.View style={[styles.textContainer, animatedStyle]}>
           <Text style={styles.title}>{item.title}</Text>
@@ -328,56 +396,41 @@ const MixedCard = memo(function MixedCard({ item, half, animatedStyle }) {
       )}
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: {
+    flex: 1, backgroundColor: '#000', backfaceVisibility: 'hidden',
+  },
   half: {
-    position: 'absolute',
-    width: wp('100%'),
-    height: '50%',
-    overflow: 'hidden',
-  },
-  topHalf: { top: 0 },
-  bottomHalf: { bottom: 0 },
+  position: "absolute",
+  width: SCREEN_W,
+  height: HALF,
+  overflow: "hidden",
+  backgroundColor: "#000",
+},
+
+topHalf: {
+  top: 0,
+},
+
+bottomHalf: {
+  top: HALF, // instead of bottom:-1 — stable across all screens
+},
+
+  // half: {
+
   card: { width: '100%', height: '100%' },
-  flipBackContent: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    top: 0,
-    left: 0,
-  },
+  absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  flipBackContent: { position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 },
   flipBackFace: { transform: [{ rotateX: '180deg' }] },
+
   image: { width: '100%', height: '100%', resizeMode: 'cover' },
-  textContainer: {
-    padding: moderateScale(20),
-    backgroundColor: '#fff',
-    height: '100%',
-  },
-  title: {
-    fontSize: scale(17),
-    fontWeight: '700',
-    color: '#000',
-    textAlign: 'center',
-  },
-  short: {
-    fontSize: scale(15),
-    color: '#333',
-    textAlign: 'center',
-    marginTop: verticalScale(8),
-  },
-  long: {
-    fontSize: scale(14),
-    color: '#555',
-    textAlign: 'center',
-    marginTop: verticalScale(6),
-    lineHeight: verticalScale(20),
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
+
+  textContainer: { padding: 20, backgroundColor: '#fff', height: '100%' },
+  title: { fontSize: 24, fontWeight: '700', color: '#000', textAlign: 'center' },
+  short: { fontSize: 16, color: '#333', textAlign: 'center', marginTop: 8 },
+  long: { fontSize: 15, color: '#555', textAlign: 'center', marginTop: 6, lineHeight: 20 },
+
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
 });
